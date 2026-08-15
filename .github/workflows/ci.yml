@@ -1,0 +1,93 @@
+name: Event-B CI
+
+on:
+  push:
+    paths:
+      - "model/**"
+      - Makefile
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "model/**"
+      - Makefile
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Validate and model-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out the model
+        uses: actions/checkout@v7
+
+      - name: Validate and check formatting with Rossi
+        uses: eventb-rossi/rossi-action@v1
+        with:
+          # Keep in sync with the minimum versions in README.md's Prerequisites.
+          version: "0.1.9"
+          path: model/
+          commands: validate,fmt-check
+          deny-warnings: "true"
+
+      # rossi-action leaves its checksum-verified Rossi binary on PATH. Persist a
+      # checked archive because the action's own build output is intentionally temporary.
+      - name: Build the checked Rodin archive
+        run: make build
+
+      - name: Exhaustively model-check the most-refined machine
+        id: model_check
+        if: ${{ !cancelled() && hashFiles('build/model.checked.zip') != '' }}
+        continue-on-error: true
+        uses: eventb-rossi/eventb-animate@v6.4
+        with:
+          version: "v6.4"
+          model-path: build/model.checked.zip
+          command: check
+          save: build/counterexample.json
+          json-report: build/model-check.json
+          junit-report: build/model-check.junit.xml
+          markdown-report: build/model-check.md
+
+      - name: Check well-definedness
+        id: wd
+        if: ${{ !cancelled() && hashFiles('build/model.checked.zip') != '' }}
+        continue-on-error: true
+        uses: eventb-rossi/eventb-animate@v6.4
+        with:
+          version: "v6.4"
+          model-path: build/model.checked.zip
+          command: wd
+          json-report: build/wd.json
+          junit-report: build/wd.junit.xml
+          markdown-report: build/wd.md
+
+      - name: Upload checked model and reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: eventb-verification
+          path: build/
+          if-no-files-found: ignore
+
+      - name: Enforce behavioral gates
+        if: always()
+        env:
+          MODEL_CHECK_OUTCOME: ${{ steps.model_check.outcome }}
+          WD_OUTCOME: ${{ steps.wd.outcome }}
+        run: |
+          if [ "$MODEL_CHECK_OUTCOME" != "success" ] || [ "$WD_OUTCOME" != "success" ]; then
+            echo "model-check outcome: $MODEL_CHECK_OUTCOME"
+            echo "well-definedness outcome: $WD_OUTCOME"
+            exit 1
+          fi
+          if ! jq -e '.status == "ok" and .completion.classification == "complete"' \
+            build/model-check.json >/dev/null; then
+            echo "The model checker did not exhaust the reachable state space."
+            exit 1
+          fi

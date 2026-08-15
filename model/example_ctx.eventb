@@ -1,0 +1,7 @@
+CONTEXT example_ctx
+CONSTANTS
+    capacity
+AXIOMS
+    @axm1 capacity = 4
+END
+

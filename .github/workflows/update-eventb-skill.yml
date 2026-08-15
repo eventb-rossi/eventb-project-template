@@ -1,0 +1,64 @@
+name: Update Event-B skill
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-eventb-skill
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Refresh vendored skill
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Record installed metadata
+        id: before
+        shell: bash
+        run: |
+          version=$(awk -F'"' '/^  version: "/ { print $2; exit }' .agents/skills/eventb/SKILL.md)
+          hash=$(jq -r '.skills.eventb.computedHash' skills-lock.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
+      - name: Update the Event-B skill
+        run: npx --yes skills update eventb --project --yes
+
+      - name: Record updated metadata
+        id: after
+        shell: bash
+        run: |
+          version=$(awk -F'"' '/^  version: "/ { print $2; exit }' .agents/skills/eventb/SKILL.md)
+          hash=$(jq -r '.skills.eventb.computedHash' skills-lock.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
+      - name: Open or refresh the dependency pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automation/update-eventb-skill
+          delete-branch: true
+          commit-message: "chore(deps): update Event-B skill"
+          title: "chore(deps): update Event-B skill"
+          add-paths: |
+            .agents/skills/eventb
+            skills-lock.json
+          body: |
+            Updates the vendored Event-B agent skill and its integrity lock.
+
+            - Previous version: `${{ steps.before.outputs.version }}`
+            - Updated version: `${{ steps.after.outputs.version }}`
+            - Previous hash: `${{ steps.before.outputs.hash }}`
+            - Updated hash: `${{ steps.after.outputs.hash }}`
+
+            This pull request is intentionally review-only and is never auto-merged.

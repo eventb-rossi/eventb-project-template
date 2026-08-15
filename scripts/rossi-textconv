@@ -1,0 +1,59 @@
+#!/usr/bin/env sh
+# Convert a Rodin source component or project archive to canonical Event-B text.
+# Git's textconv interface supplies one filename and expects converted text on stdout.
+set -eu
+
+input=${1:?"usage: rossi-textconv <model.zip|component.buc|component.bum>"}
+
+if ! command -v rossi >/dev/null 2>&1; then
+    echo "rossi-textconv: rossi is required on PATH" >&2
+    exit 1
+fi
+
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/rossi-textconv.XXXXXX")
+cleanup() {
+    rm -rf -- "$tmp_dir"
+}
+trap cleanup EXIT HUP INT TERM
+
+# Git normally preserves the basename for textconv blobs, but that is not an API
+# guarantee. Give rossi a supported extension even when Git supplies an opaque path.
+case "$input" in
+    *.zip | *.ZIP) normalized_name=${input##*/} ;;
+    *.bum | *.BUM) normalized_name=${input##*/} ;;
+    *.buc | *.BUC) normalized_name=${input##*/} ;;
+    *)
+        signature=$(dd if="$input" bs=2 count=1 2>/dev/null || true)
+        if [ "$signature" = "PK" ]; then
+            normalized_name=input.zip
+        elif grep -q 'org.eventb.core.machineFile' "$input"; then
+            normalized_name=input.bum
+        elif grep -q 'org.eventb.core.contextFile' "$input"; then
+            normalized_name=input.buc
+        else
+            echo "rossi-textconv: unsupported Rodin input: $input" >&2
+            exit 1
+        fi
+        ;;
+esac
+
+normalized="$tmp_dir/$normalized_name"
+cp "$input" "$normalized"
+output="$tmp_dir/output"
+rossi import "$normalized" --merge --output "$output"
+
+if [ -f "$output" ]; then
+    cat "$output"
+elif [ -d "$output" ]; then
+    find "$output" -type f -name '*.eventb' -print \
+        | LC_ALL=C sort \
+        | while IFS= read -r component; do
+            relative=${component#"$output"/}
+            printf '### %s\n' "$relative"
+            cat "$component"
+            printf '\n'
+        done
+else
+    echo "rossi-textconv: rossi produced no converted output for $input" >&2
+    exit 1
+fi

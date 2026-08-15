@@ -1,0 +1,14 @@
+# Generated Event-B archives and reports
+/build/
+
+# Rodin workspace state (Rodin project descriptors remain trackable)
+.metadata/
+**/.rossi/rodin/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*~

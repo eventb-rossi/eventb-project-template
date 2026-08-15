@@ -1,0 +1,23 @@
+# Keep authored text stable across platforms.
+* text=auto eol=lf
+*.eventb text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Makefile text eol=lf
+.project text eol=lf
+
+# Render Rodin source XML and archives as canonical .eventb text for Git diffs.
+# Keep merges binary: a line merge of Rodin XML or a ZIP can corrupt the model.
+*.buc -text diff=rossi merge=binary
+*.bum -text diff=rossi merge=binary
+*.zip -text diff=rossi merge=binary
+
+# Rodin checked/proof artifacts are generated and are not accepted by
+# `rossi import`, so do not attempt text conversion or textual merges.
+*.bcc binary
+*.bcm binary
+*.bpo binary
+*.bpr binary
+*.bps binary
