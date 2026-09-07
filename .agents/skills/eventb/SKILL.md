@@ -8,12 +8,12 @@ description: >
   out of scope.
 license: Apache-2.0
 compatibility: >-
-  Requires the rossi CLI 0.1.8+ and eventb-animate 6.4+ on PATH (Homebrew tap
+  Requires the rossi CLI 0.2.0+ and eventb-animate 6.4+ on PATH (Homebrew tap
   eventb-rossi/tap, APT, COPR, or Scoop), and Java 21+ for eventb-animate. No
   network access needed at run time.
 metadata:
   author: "eventb-rossi"
-  version: "1.1.1"
+  version: "1.2.0"
   homepage: "https://github.com/eventb-rossi/eventb-skill"
 ---
 
@@ -26,7 +26,7 @@ not author interactive Rodin proofs.
 
 ## 1. Check the required tools
 
-Require `rossi` 0.1.8+ and `eventb-animate` 6.4+. Check them; never install or
+Require `rossi` 0.2.0+ and `eventb-animate` 6.4+. Check them; never install or
 upgrade them yourself. If either is absent or older, stop and ask the user to do it.
 
 ```sh
@@ -133,10 +133,17 @@ eventb-animate info --prefs /tmp/model.zip \
   | rg 'MAX_(INITIALISATIONS|OPERATIONS)|DEFAULT_SETSIZE'
 ```
 
-Raise `MAX_INITIALISATIONS` or `MAX_OPERATIONS` only enough to enumerate the known
-finite choices, then rerun and require `completion.classification: "complete"`.
+Raise `MAX_INITIALISATIONS` or `MAX_OPERATIONS` **strictly above** the known finite
+count, never to exactly it — reaching a cap is itself the incompleteness signal, so
+an event with 16 enablings still reports incomplete at `-p MAX_OPERATIONS=16`. Rerun
+and require `completion.classification: "complete"`.
 For an intentionally generic/unbounded model, report the bounded result honestly
 and add a separate small finite scenario when an exhaustive gate matters.
+
+The default run also applies ProB hash symmetry reduction (`SYMMETRY_MODE = hash`,
+overriding ProB's own `off`), so the state count it prints is a quotient, not the
+concrete state space. Rerun with `-p SYMMETRY_MODE=off` before reporting a count.
+Both settings detect the same invariant violations; only the number moves.
 
 If there is a refinement chain, repeat the model check and `wd` for every level
 with `-m <machine>`.
@@ -179,8 +186,10 @@ backend is the normal authoring path.
 ## 7. Finish with a readable artifact
 
 Deliver the `.eventb` files plus a short `README.md` containing scope, model shape,
-the safety invariant in plain language, any refinement ledger, exact check commands,
-completeness, event coverage, WD result, and any deliberate abstraction. A clean
+the safety invariant in plain language, any refinement ledger, exact check commands
+including every `-p` preference, completeness, the reported state count, event
+coverage, WD result, and any deliberate abstraction. A count that moves with a
+preference is not a result unless the preference is recorded beside it. A clean
 bounded run means
 “no bug found within the bound.” A complete finite run proves only the checked
 **reachable behaviour**: it can still accept an over-strong, non-inductive

@@ -16,13 +16,13 @@ way and the tools happily take many files at once.
 ## Conventions the formatter enforces
 
 - **Keywords are case-insensitive on input** (`machine`, `Machine`, `MACHINE` all
-  parse). `rossi fmt` canonicalizes **structural keywords to UPPERCASE**
-  (`MACHINE`, `SEES`, `INVARIANTS`, `EVENT`, `THEN`, `END`, …).
+  parse). `rossi fmt --style rossi` — this skill's style — canonicalizes structural
+  keywords to **UPPERCASE**; 0.2's default `--style camille` emits them lowercase.
 - **Operators may be ASCII or Unicode on input** (`:=`/`≔`, `:`/`∈`, `NAT`/`ℕ`,
   `|->`/`↦`, `<=`/`≤`). `rossi fmt` canonicalizes to **Unicode**. See
   `math-toolkit.md` for the full spelling table.
 - **Indentation** is four spaces; each clause keyword sits on its own line with its
-  payload indented under it. Let `rossi fmt -i` do this — don't format by hand.
+  payload indented under it. Let `rossi fmt -i --style rossi` do it, never by hand.
 - **Comments**: `// line` and `/* block */`. They parse, but `fmt` reflows them
   unpredictably (a line comment migrates onto the preceding token's line), so keep
   `.eventb` files comment-free and put prose in a sibling `README.md`.
@@ -51,7 +51,7 @@ CONSTANTS
     green
 AXIOMS
     @axm1 partition(COLOR, {green}, {red})
-    @thm1 theorem  green ∈ COLOR
+    @thm1 theorem  d ∈ ℕ1
 END
 ```
 
@@ -64,7 +64,10 @@ END
 | `THEOREMS` | labelled predicates that should *follow from* the axioms (out of scope here, but accepted). |
 
 **Theorems** can also be flagged inline inside `AXIOMS`/`INVARIANTS` with the
-`theorem` keyword (either order): `@thm1 theorem P` or `theorem @thm1 P`.
+`theorem` keyword (either order): `@thm1 theorem P` or `theorem @thm1 P`. Write one
+only when it *derives* something later obligations reuse — `@thm1` above needs both
+inherited axioms. `partition` already gives `green ≠ red`, so restating it as a
+theorem proves nothing.
 
 ## Machine
 
