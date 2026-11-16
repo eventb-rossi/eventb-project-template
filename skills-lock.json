@@ -1,11 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "eventb": {
       "source": "eventb-rossi/eventb-skill",
       "sourceType": "github",
       "skillPath": "skills/eventb/SKILL.md",
-      "computedHash": "bf74f8b6e1f67fb2c67efd402d7b0e08d0f575e2e522c950a007bd3186370c69"
+      "computedHash": "1c3b48d64507c19b7e92c3a068270afb5c1a474cfbe4842cc6e24f926856f5ac",
+      "commit": "a95eca2761b22319cdccdc7ea47da4649c1587fd"
     }
   }
 }
